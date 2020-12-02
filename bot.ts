@@ -16,6 +16,12 @@ bot.on(UpdateType.Message, async ({ message }) => {
     }
   });
   if (regex.test(link)) {
+    bot.sendChatAction({
+      chat_id: message.chat.id,
+      action: "upload_video",
+    }).catch((e) => {
+      console.error(e);
+    });
     if (link.includes("m.tiktok")) {
       await fetch(link, {
         redirect: "follow",
