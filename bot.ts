@@ -63,7 +63,12 @@ bot.on(UpdateType.Message, async ({ message }) => {
             });
           });
         }
-      }).catch((e) => console.log(e));
+      }).catch((e) => {
+        bot.sendMessage({
+          chat_id: message.chat.id,
+          text: `got an error while trying to contact the API\n${response.status}\n${response.statusText}`,
+        });
+      });
     }).catch((e) => console.error(e));
   }
 });
