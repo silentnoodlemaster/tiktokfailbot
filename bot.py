@@ -3,9 +3,9 @@ from selenium import webdriver
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
-import time
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.expected_conditions import title_is, staleness_of
 import os
-import hashlib
 import logging
 from telegram import Update
 from telegram.constants import MESSAGEENTITY_URL, CHATACTION_UPLOAD_VIDEO
@@ -31,6 +31,7 @@ def download_tiktok_video(url: str) -> str:
     '''
     options = Options()
     options.add_argument('--headless')
+    options.page_load_strategy = 'eager'
 
     profile = FirefoxProfile()
     profile.set_preference('browser.download.folderList', 2)
@@ -48,7 +49,6 @@ def download_tiktok_video(url: str) -> str:
     driver = webdriver.Firefox(profile, options=options)
 
     driver.get(url)
-    time.sleep(1)
     elem = driver.find_element(By.TAG_NAME, 'video')
     src = elem.get_attribute('src')
     script = f'''
@@ -56,18 +56,15 @@ def download_tiktok_video(url: str) -> str:
         link.setAttribute('download', 'download');
         link.setAttribute('href', '{src}');
         link.click();
+        document.title = "dl start";
         '''
     driver.execute_script(script)
-
-    driver.quit()
-
-    with open('mp4', 'rb') as f:
-        file_hash = hashlib.blake2b()
-        while chunk := f.read(8192):
-            file_hash.update(chunk)
-
-    new_name = file_hash.hexdigest()+'.mp4'
+    WebDriverWait(driver, 60).until(title_is('dl start'))
+    while(os.path.getsize('mp4') == 0):
+        pass
+    new_name = 'v.mp4'
     os.rename('mp4', new_name)
+    driver.quit()
     return os.path.abspath(new_name)
 
 
@@ -89,7 +86,7 @@ def main():
     dispatcher = updater.dispatcher
 
     dispatcher.add_handler(MessageHandler(Filters.text & Filters.entity(
-        MESSAGEENTITY_URL) & Filters.regex('tiktok\.com\/[-A-Za-z0-9+/=]+'), reply_video))
+        MESSAGEENTITY_URL) & Filters.regex(r'tiktok\.com\/[-A-Za-z0-9+/=]+'), reply_video))
 
     updater.start_polling()
     updater.idle()
